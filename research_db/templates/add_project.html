@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+
+{% block title %}Add Project - Marga Research Institute{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h4>Add New Research Project</h4>
+                <a href="{{ url_for('projects') }}" class="btn btn-secondary btn-sm">← Back to Projects</a>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle"></i>
+                                    <strong>Project ID:</strong> Will be automatically generated using the end date year (e.g., PROJ-2026-001 for projects ending in 2026)
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="status" class="form-label">Status</label>
+                                <select class="form-select" id="status" name="status">
+                                    <option value="Active" selected>Active</option>
+                                    <option value="On Hold">On Hold</option>
+                                    <option value="Completed">Completed</option>
+                                    <option value="Cancelled">Cancelled</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="title" class="form-label">Project Title <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="title" name="title" 
+                               placeholder="Enter project title" required maxlength="200" minlength="3">
+                        <div class="form-text">3-200 characters required</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="4" 
+                                  placeholder="Detailed description of the research project" maxlength="5000"></textarea>
+                        <div class="form-text">Maximum 5000 characters</div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="category" class="form-label">Category</label>
+                                <input type="text" class="form-control" id="category" name="category" 
+                                       placeholder="e.g., Research, Survey, Study, Evaluation...">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="theme" class="form-label">Theme</label>
+                                <input type="text" class="form-control" id="theme" name="theme" 
+                                       placeholder="e.g., Education, Health, Development...">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="start_date" class="form-label">Start Date</label>
+                                <input type="date" class="form-control" id="start_date" name="start_date">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="end_date" class="form-label">End Date</label>
+                                <input type="date" class="form-control" id="end_date" name="end_date">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="principal_investigator" class="form-label">Principal Investigator <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="principal_investigator" name="principal_investigator" 
+                               placeholder="Dr. John Smith" required minlength="2" maxlength="100">
+                        <div class="form-text">2-100 characters required</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="team_members" class="form-label">Team Members</label>
+                        <textarea class="form-control" id="team_members" name="team_members" rows="3" 
+                                  placeholder="List team members (one per line or comma-separated)"></textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="budget" class="form-label">Budget</label>
+                                <div class="input-group">
+                                    <select class="form-select" id="currency" name="currency" style="max-width: 120px;">
+                                        <option value="Rs" selected>Rs (LKR)</option>
+                                        <option value="USD">USD</option>
+                                        <option value="EUR">EUR</option>
+                                        <option value="GBP">GBP</option>
+                                        <option value="INR">INR</option>
+                                        <option value="AUD">AUD</option>
+                                        <option value="CAD">CAD</option>
+                                        <option value="JPY">JPY</option>
+                                        <option value="CNY">CNY</option>
+                                        <option value="SGD">SGD</option>
+                                        <option value="HKD">HKD</option>
+                                        <option value="THB">THB</option>
+                                        <option value="MYR">MYR</option>
+                                        <option value="PKR">PKR</option>
+                                        <option value="BDT">BDT</option>
+                                        <option value="NPR">NPR</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                    <input type="number" class="form-control" id="budget" name="budget" 
+                                           step="0.01" min="0" max="10000000000" placeholder="0.00">
+                                </div>
+                                <small class="text-muted">Select currency and enter amount</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="funding_source" class="form-label">Funding Source</label>
+                                <input type="text" class="form-control" id="funding_source" name="funding_source" 
+                                       placeholder="e.g., NSF, NIH, Private Grant">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('projects') }}" class="btn btn-secondary me-md-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Create Project</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Set date constraints
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const fiftyYearsAgo = new Date(currentYear - 50, 0, 1);
+    const tenYearsFromNow = new Date(currentYear + 10, 11, 31);
+    const twentyYearsFromNow = new Date(currentYear + 20, 11, 31);
+    
+    const startDateInput = document.getElementById('start_date');
+    const endDateInput = document.getElementById('end_date');
+    
+    // Set date input constraints
+    startDateInput.min = fiftyYearsAgo.toISOString().split('T')[0];
+    startDateInput.max = tenYearsFromNow.toISOString().split('T')[0];
+    
+    endDateInput.min = today.toISOString().split('T')[0];
+    endDateInput.max = twentyYearsFromNow.toISOString().split('T')[0];
+    
+    // Validate end date is after start date
+    function validateDates() {
+        const startDate = startDateInput.value;
+        const endDate = endDateInput.value;
+        
+        if (startDate && endDate && endDate < startDate) {
+            endDateInput.setCustomValidity('End date cannot be earlier than start date');
+            return false;
+        } else {
+            endDateInput.setCustomValidity('');
+            
+            // Check for unreasonably long projects (more than 15 years)
+            if (startDate && endDate) {
+                const start = new Date(startDate);
+                const end = new Date(endDate);
+                const yearsDiff = (end - start) / (1000 * 60 * 60 * 24 * 365);
+                
+                if (yearsDiff > 15) {
+                    endDateInput.setCustomValidity('Project duration cannot exceed 15 years');
+                    return false;
+                } else {
+                    endDateInput.setCustomValidity('');
+                }
+            }
+        }
+        return true;
+    }
+    
+    startDateInput.addEventListener('change', validateDates);
+    endDateInput.addEventListener('change', validateDates);
+    
+    // Character count for description
+    const descriptionTextarea = document.getElementById('description');
+    const descriptionCounter = document.createElement('div');
+    descriptionCounter.className = 'form-text';
+    descriptionCounter.style.textAlign = 'right';
+    descriptionTextarea.parentNode.appendChild(descriptionCounter);
+    
+    function updateDescriptionCounter() {
+        const remaining = 5000 - descriptionTextarea.value.length;
+        descriptionCounter.textContent = `${remaining} characters remaining`;
+        descriptionCounter.style.color = remaining < 100 ? '#dc3545' : '#6c757d';
+    }
+    
+    descriptionTextarea.addEventListener('input', updateDescriptionCounter);
+    updateDescriptionCounter();
+    
+    // Form validation on submit
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        let isValid = true;
+        
+        // Validate required fields
+        const title = document.getElementById('title').value.trim();
+        const pi = document.getElementById('principal_investigator').value.trim();
+        
+        if (title.length < 3) {
+            alert('Project title must be at least 3 characters long.');
+            isValid = false;
+        }
+        
+        if (pi.length < 2) {
+            alert('Principal Investigator name must be at least 2 characters long.');
+            isValid = false;
+        }
+        
+        // Validate dates
+        if (!validateDates()) {
+            alert('Please check your project dates.');
+            isValid = false;
+        }
+        
+        // Validate budget
+        const budget = parseFloat(document.getElementById('budget').value || 0);
+        if (budget < 0) {
+            alert('Budget cannot be negative.');
+            isValid = false;
+        }
+        
+        if (budget > 10000000000) {
+            alert('Budget cannot exceed 10 billion.');
+            isValid = false;
+        }
+        
+        if (!isValid) {
+            e.preventDefault();
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,380 @@
+{% extends "base.html" %}
+
+{% block title %}Projects - Marga Research Institute{% endblock %}
+
+{# Macro for generating sort links #}
+{% macro sort_link(column, display_name, current_sort, current_order) %}
+    {% set new_order = 'asc' if current_sort != column or current_order == 'desc' else 'desc' %}
+    {% set is_active = current_sort == column %}
+    {% set sort_icon = '' %}
+    {% if is_active %}
+        {% set sort_icon = '▲' if current_order == 'asc' else '▼' %}
+    {% endif %}
+    <a href="{{ url_for('projects', 
+                       search=search_query or '', 
+                       status=status_filter or '', 
+                       funding_source=funding_source_filter or '',
+                       category=category_filter or '',
+                       theme=theme_filter or '',
+                       currency=currency_filter or '',
+                       start_date=start_date_filter or '', 
+                       end_date=end_date_filter or '',
+                       sort=column,
+                       order=new_order) }}" 
+       class="text-decoration-none text-white d-flex justify-content-between align-items-center sortable-header {{ 'active-sort' if is_active else '' }}">
+        <span>{{ display_name }}</span>
+        <span class="sort-indicator">
+            {% if is_active %}
+                {{ sort_icon }}
+            {% else %}
+                <span class="sort-arrows">↕</span>
+            {% endif %}
+        </span>
+    </a>
+{% endmacro %}
+
+{% block content %}
+
+
+    <!-- Action Buttons -->
+    <div class="d-flex justify-content-end gap-3 mb-5">
+        {% if current_user.can_edit_projects() %}
+            <a href="{{ url_for('add_project') }}" class="btn btn-primary btn-sm filter-btn">
+                <i class="fas fa-plus me-2"></i>Add New Project
+            </a>
+            <a href="{{ url_for('bulk_import') }}" class="btn btn-outline-primary btn-sm filter-btn">
+                <i class="fas fa-upload me-2"></i>Bulk Import
+            </a>
+            <button type="button" class="btn btn-outline-danger btn-sm filter-btn" onclick="confirmClearAllProjects()">
+                <i class="fas fa-trash me-2"></i>Clear All Projects
+            </button>
+        {% endif %}
+        <a href="{{ url_for('export_projects_csv', 
+                          search=search_query or '', 
+                          status=status_filter or '', 
+                          funding_source=funding_source_filter or '',
+                          category=category_filter or '',
+                          theme=theme_filter or '',
+                          currency=currency_filter or '',
+                          start_date=start_date_filter or '', 
+                          end_date=end_date_filter or '',
+                          sort=sort_by or '',
+                          order=sort_order or '') }}" 
+           class="btn btn-primary btn-sm filter-btn">
+            <i class="fas fa-download me-1"></i>Export Data
+        </a>
+    </div>
+
+    <!-- Search and Filter Section -->
+    <form method="GET" action="{{ url_for('projects') }}" id="filterForm" class="mb-4">
+        <div class="row g-2 mb-4">
+            <!-- Search Bar -->
+            <div class="col-lg-2 col-md-4">
+                <label for="search" class="form-label small">
+                    <i class="fas fa-search me-1"></i>Search Projects
+                </label>
+                <input type="text" 
+                       class="form-control form-control-sm" 
+                       id="search" 
+                       name="search" 
+                       value="{{ search_query or '' }}"
+                       placeholder="Title, PI, description...">
+            </div>
+            
+            <!-- Status Filter -->
+            <div class="col-lg-1 col-md-2">
+                <label for="status" class="form-label small">Status</label>
+                <select class="form-select form-select-sm" id="status" name="status">
+                    <option value="">All</option>
+                    {% for status in statuses %}
+                        <option value="{{ status }}" {% if status == status_filter %}selected{% endif %}>
+                            {{ status }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <!-- Category Filter -->
+            <div class="col-lg-1 col-md-2">
+                <label for="category" class="form-label small">Category</label>
+                <select class="form-select form-select-sm" id="category" name="category">
+                    <option value="">All</option>
+                    {% for category in categories %}
+                        <option value="{{ category }}" {% if category == category_filter %}selected{% endif %}>
+                            {{ category[:15] }}{% if category|length > 15 %}...{% endif %}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <!-- Theme Filter -->
+            <div class="col-lg-1 col-md-2">
+                <label for="theme" class="form-label small">Theme</label>
+                <select class="form-select form-select-sm" id="theme" name="theme">
+                    <option value="">All</option>
+                    {% for theme in themes %}
+                        <option value="{{ theme }}" {% if theme == theme_filter %}selected{% endif %}>
+                            {{ theme[:15] }}{% if theme|length > 15 %}...{% endif %}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <!-- Currency Filter -->
+            <div class="col-lg-1 col-md-2">
+                <label for="currency" class="form-label small">Currency</label>
+                <select class="form-select form-select-sm" id="currency" name="currency">
+                    <option value="">All</option>
+                    {% for currency in currencies %}
+                        <option value="{{ currency }}" {% if currency == currency_filter %}selected{% endif %}>
+                            {{ currency }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <!-- Funding Source Filter -->
+            <div class="col-lg-2 col-md-4">
+                <label for="funding_source" class="form-label small">Funding Source</label>
+                <select class="form-select form-select-sm" id="funding_source" name="funding_source">
+                    <option value="">All Sources</option>
+                    {% for funding_source in funding_sources %}
+                        <option value="{{ funding_source }}" {% if funding_source == funding_source_filter %}selected{% endif %}>
+                            {{ funding_source[:20] }}{% if funding_source|length > 20 %}...{% endif %}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <!-- Date Range Filters -->
+            <div class="col-lg-1 col-md-3">
+                <label for="start_date" class="form-label small">From</label>
+                <input type="date" 
+                       class="form-control form-control-sm" 
+                       id="start_date" 
+                       name="start_date" 
+                       value="{{ start_date_filter or '' }}">
+            </div>
+            
+            <div class="col-lg-1 col-md-3">
+                <label for="end_date" class="form-label small">To</label>
+                <input type="date" 
+                       class="form-control form-control-sm" 
+                       id="end_date" 
+                       name="end_date" 
+                       value="{{ end_date_filter or '' }}">
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="col-lg-2 col-md-6 d-flex align-items-end">
+                <div class="d-flex gap-2 w-100">
+                    <button type="submit" class="btn btn-primary btn-sm filter-btn flex-fill" title="Apply Filters">
+                        <i class="fas fa-search me-1"></i>Search
+                    </button>
+                    <a href="{{ url_for('projects') }}" class="btn btn-outline-secondary btn-sm filter-btn flex-fill" title="Clear All Filters">
+                        <i class="fas fa-times me-1"></i>Clear
+                    </a>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <!-- Results Summary -->
+    {% if search_query or status_filter or funding_source_filter or category_filter or theme_filter or currency_filter or start_date_filter or end_date_filter %}
+        <div class="alert alert-info mb-4">
+            <div class="d-flex align-items-center">
+                <div>
+                    <strong>Found {{ projects|length }} project(s)</strong> matching your criteria:
+                    {% if search_query %}
+                        <span class="badge bg-primary ms-2">Search: "{{ search_query }}"</span>
+                    {% endif %}
+                    {% if status_filter %}
+                        <span class="badge bg-success ms-1">Status: {{ status_filter }}</span>
+                    {% endif %}
+                    {% if category_filter %}
+                        <span class="badge bg-secondary ms-1">Category: {{ category_filter[:15] }}{% if category_filter|length > 15 %}...{% endif %}</span>
+                    {% endif %}
+                    {% if theme_filter %}
+                        <span class="badge bg-dark ms-1">Theme: {{ theme_filter[:15] }}{% if theme_filter|length > 15 %}...{% endif %}</span>
+                    {% endif %}
+                    {% if currency_filter %}
+                        <span class="badge bg-warning ms-1">Currency: {{ currency_filter }}</span>
+                    {% endif %}
+                    {% if funding_source_filter %}
+                        <span class="badge bg-info ms-1">Source: {{ funding_source_filter[:15] }}{% if funding_source_filter|length > 15 %}...{% endif %}</span>
+                    {% endif %}
+                    {% if start_date_filter %}
+                        <span class="badge bg-light text-dark ms-1">From: {{ start_date_filter }}</span>
+                    {% endif %}
+                    {% if end_date_filter %}
+                        <span class="badge bg-light text-dark ms-1">To: {{ end_date_filter }}</span>
+                    {% endif %}
+
+                    {% if end_date_filter %}
+                        <span class="badge bg-info ms-1">To: {{ end_date_filter }}</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Projects Table -->
+    {% if projects %}
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th class="border-0 fw-normal py-3" style="width: 140px; white-space: nowrap;">
+                        {{ sort_link('project_id', 'Project ID', sort_by, sort_order) }}
+                    </th>
+                    <th class="border-0 fw-normal py-3">
+                        <span class="text-white">Title</span>
+                    </th>
+                    <th class="border-0 fw-normal py-3" style="width: 140px; white-space: nowrap;">
+                        <span class="text-white">Principal Investigator</span>
+                    </th>
+                    <th class="border-0 fw-normal py-3 d-none d-lg-table-cell" style="width: 120px;">
+                        <span class="text-white">Category</span>
+                    </th>
+                            <th class="border-0 fw-normal py-3 d-none d-lg-table-cell" style="width: 120px;">
+                                <span class="text-white">Theme</span>
+                            </th>
+                            <th class="border-0 fw-normal d-none d-md-table-cell" style="width: 200px;">
+                                <span class="text-white">Duration</span>
+                            </th>
+                            <th class="border-0 fw-normal">
+                                <span class="text-white">Status</span>
+                            </th>
+                            <th class="border-0 fw-normal d-none d-xl-table-cell">
+                                <span class="text-white">Funding Source</span>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for project in projects %}
+                        <tr>
+                            <td style="white-space: nowrap;">{{ project.project_id }}</td>
+                            <td>
+                                <a href="{{ url_for('view_project', id=project.id) }}" 
+                                   class="text-decoration-none text-dark">
+                                    {{ project.title[:50] }}{% if project.title|length > 50 %}...{% endif %}
+                                </a>
+                            </td>
+                            <td>{{ project.principal_investigator }}</td>
+                            <td class="d-none d-lg-table-cell">
+                                {% if project.category %}
+                                    <span class="text-truncate" title="{{ project.category }}">
+                                        {% if project.category|length > 20 %}
+                                            {{ project.category[:17] }}...
+                                        {% else %}
+                                            {{ project.category }}
+                                        {% endif %}
+                                    </span>
+                                {% else %}
+                                    <em class="text-muted">Not specified</em>
+                                {% endif %}
+                            </td>
+                            <td class="d-none d-lg-table-cell">
+                                {% if project.theme %}
+                                    <span class="text-truncate" title="{{ project.theme }}">
+                                        {% if project.theme|length > 20 %}
+                                            {{ project.theme[:17] }}...
+                                        {% else %}
+                                            {{ project.theme }}
+                                        {% endif %}
+                                    </span>
+                                {% else %}
+                                    <em class="text-muted">Not specified</em>
+                                {% endif %}
+                            </td>
+                            <td class="d-none d-md-table-cell">
+                                {% if project.status == 'Completed' and project.start_date and project.end_date %}
+                                    {% set duration_days = (project.end_date - project.start_date).days %}
+                                    {% if duration_days < 30 %}
+                                        {{ duration_days }} day{{ 's' if duration_days != 1 else '' }}
+                                    {% elif duration_days < 365 %}
+                                        {% set months = (duration_days / 30.44) | round(1) %}
+                                        {{ months }} month{{ 's' if months != 1 else '' }}
+                                    {% else %}
+                                        {% set years = (duration_days / 365.25) | round(1) %}
+                                        {{ years }} year{{ 's' if years != 1 else '' }}
+                                    {% endif %}
+                                {% elif project.start_date or project.end_date %}
+                                    <div class="small">
+                                        {% if project.start_date %}
+                                            <div><strong>Start:</strong> {{ project.start_date.strftime('%Y-%m-%d') }}</div>
+                                        {% endif %}
+                                        {% if project.end_date %}
+                                            <div><strong>End:</strong> {{ project.end_date.strftime('%Y-%m-%d') }}</div>
+                                        {% endif %}
+                                    </div>
+                                {% else %}
+                                    <em class="text-muted">Not specified</em>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge {% if project.status == 'Active' %}bg-warning{% elif project.status == 'Completed' %}bg-success{% elif project.status == 'On Hold' %}bg-secondary{% elif project.status == 'Cancelled' %}bg-danger{% else %}bg-light{% endif %}">
+                                    {{ project.status }}
+                                </span>
+                            </td>
+                            <td class="d-none d-xl-table-cell">
+                                {% if project.funding_source %}
+                                    <span class="text-truncate" title="{{ project.funding_source }}">
+                                        {% if project.funding_source|length > 25 %}
+                                            {{ project.funding_source[:22] }}...
+                                        {% else %}
+                                            {{ project.funding_source }}
+                                        {% endif %}
+                                    </span>
+                                {% else %}
+                                    <em class="text-muted">Not specified</em>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+    {% else %}
+    <!-- No Projects Found -->
+    <div class="card">
+        <div class="card-body text-center py-6">
+            <i class="fas fa-search fa-3x text-muted mb-4"></i>
+            <h4>No Projects Found</h4>
+            <p class="text-muted mb-4">
+                {% if search_query or status_filter or funding_source_filter or start_date_filter or end_date_filter %}
+                    No projects match your current filters. Try adjusting your search criteria.
+                {% else %}
+                    There are no projects in the system yet.
+                {% endif %}
+            </p>
+            {% if current_user.can_edit_projects() %}
+            <a href="{{ url_for('add_project') }}" class="btn btn-primary">
+                Add Your First Project
+            </a>
+            {% endif %}
+            {% if search_query or status_filter or funding_source_filter or start_date_filter or end_date_filter %}
+            <a href="{{ url_for('projects') }}" class="btn btn-outline-secondary ms-2">
+                Clear Filters
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Hidden form for clearing all projects -->
+<form id="clearAllProjectsForm" method="POST" action="{{ url_for('clear_all_projects') }}" style="display: none;">
+</form>
+
+<script>
+function confirmClearAllProjects() {
+    if (confirm('⚠️ WARNING: This will permanently delete ALL projects in the database!\n\nThis action cannot be undone. Are you absolutely sure you want to proceed?\n\nClick OK to delete all projects or Cancel to abort.')) {
+        if (confirm('🚨 FINAL CONFIRMATION: You are about to delete ALL projects!\n\nThis will remove all project data permanently. Please confirm this is what you want to do.')) {
+            document.getElementById('clearAllProjectsForm').submit();
+        }
+    }
+}
+</script>
+
+{% endblock %}

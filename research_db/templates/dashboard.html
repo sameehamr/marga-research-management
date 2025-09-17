@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Marga Institute{% endblock %}
+
+{% block content %}
+<div class="fade-in-up">
+    <div class="row mb-5">
+        <div class="col-12">
+            <h1 class="page-title display-4 text-center mb-4">Project Management Dashboard</h1>
+            <p class="lead text-center text-muted mb-5">Welcome to the Marga Institute Project Management System</p>
+        </div>
+    </div>
+
+    {% if current_user.is_authenticated %}
+    <!-- Statistics Cards -->
+    <div class="row g-4 mb-6 justify-content-center">
+        <div class="col-lg-2 col-md-4 col-sm-6">
+            <a href="{{ url_for('projects') }}?status=Active" class="stats-card stats-card-link">
+                <div class="stats-number">{{ stats.active }}</div>
+                <div class="stats-label">Active Projects</div>
+            </a>
+        </div>
+        
+    
+        <div class="col-lg-2 col-md-4 col-sm-6">
+            <a href="{{ url_for('projects') }}?status=Completed" class="stats-card stats-card-link">
+                <div class="stats-number">{{ stats.completed }}</div>
+                <div class="stats-label">Completed Projects</div>
+            </a>
+        </div>
+        
+        <div class="col-lg-2 col-md-4 col-sm-6">
+            <a href="{{ url_for('projects') }}?status=On%20Hold" class="stats-card stats-card-link">
+                <div class="stats-number">{{ stats.on_hold or 0 }}</div>
+                <div class="stats-label">On Hold</div>
+            </a>
+        </div>
+    
+
+        <div class="col-lg-2 col-md-4 col-sm-6">
+            <a href="{{ url_for('projects') }}" class="stats-card stats-card-link">
+                <div class="stats-number">{{ stats.total }}</div>
+                <div class="stats-label">Total Projects</div>
+            </a>
+        </div>
+    </div>
+        
+    <!-- Quick Actions -->
+    <div class="row g-4 mb-6 justify-content-center">
+        {% if current_user.can_edit_projects() %}
+        <div class="col-lg-2 col-md-4 col-sm-6">
+            <a href="{{ url_for('add_project') }}" class="btn btn-primary w-100 py-3">
+                <i class="fas fa-plus-circle me-2"></i>Add New Project
+            </a>
+        </div>
+        {% endif %}
+        <div class="col-lg-2 col-md-4 col-sm-6">
+            <a href="{{ url_for('projects') }}" class="btn btn-primary w-100 py-3">
+                <i class="fas fa-search me-2"></i>Browse Projects
+            </a>
+        </div>
+        <div class="col-lg-2 col-md-4 col-sm-6">
+            <a href="{{ url_for('export_projects_csv') }}" class="btn btn-primary w-100 py-3">
+                <i class="fas fa-download me-2"></i>Export Data
+            </a>
+        </div>
+    </div>
+
+    <!-- Recent Projects -->
+    {% if stats.recent_projects %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <h4 class="mb-3 fw-bold" style="color: #303281;"></i>Recent Projects</h4>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Project ID</th>
+                            <th>Title</th>
+                            <th>Status</th>
+                            <th>Principal Investigator</th>
+                            <th>Start Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for project in stats.recent_projects %}
+                        <tr>
+                            <td>{{ project.project_id }}</td>
+                            <td>
+                                <a href="{{ url_for('view_project', id=project.id) }}" class="text-decoration-none text-dark">
+                                    {{ project.title[:50] }}{% if project.title|length > 50 %}...{% endif %}
+                                </a>
+                            </td>
+                            <td>
+                                <span class="badge {% if project.status == 'Active' %}bg-warning{% elif project.status == 'Completed' %}bg-success{% elif project.status == 'On Hold' %}bg-secondary{% elif project.status == 'Cancelled' %}bg-danger{% else %}bg-light{% endif %}">
+                                    {{ project.status }}
+                                </span>
+                            </td>
+                            <td>{{ project.principal_investigator }}</td>
+                            <td>{{ project.start_date.strftime('%Y-%m-%d') if project.start_date else 'N/A' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <!-- Not Authenticated View -->
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="card text-center">
+                <div class="card-body p-5">
+                    <i class="fas fa-lock fa-4x text-muted mb-4"></i>
+                    <h3>Access Required</h3>
+                    <p class="text-muted mb-4">Please log in to access the project management system.</p>
+                    <a href="{{ url_for('login') }}" class="btn btn-primary btn-lg">
+                        <i class="fas fa-sign-in-alt me-2"></i>Login to Continue
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

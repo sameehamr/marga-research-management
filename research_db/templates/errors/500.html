@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Server Error - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="container text-center py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="error-page">
+                <h1 class="error-code display-1 text-danger">500</h1>
+                <h2 class="error-title mb-3">Internal Server Error</h2>
+                <p class="error-description mb-4">
+                    Something went wrong on our end. We're sorry for the inconvenience. Our team has been notified and is working to fix the issue.
+                </p>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>What can you do?</strong>
+                    <ul class="mb-0 mt-2 text-start">
+                        <li>Try refreshing the page</li>
+                        <li>Go back to the previous page</li>
+                        <li>Contact support if the problem persists</li>
+                    </ul>
+                </div>
+                <div class="error-actions">
+                    <button onclick="window.location.reload();" class="btn btn-primary me-2">
+                        <i class="fas fa-redo me-1"></i>Refresh Page
+                    </button>
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-home me-1"></i>Go to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.error-page {
+    padding: 2rem;
+}
+
+.error-code {
+    font-weight: 700;
+    font-size: 8rem;
+    line-height: 1;
+    margin-bottom: 1rem;
+}
+
+.error-title {
+    color: #6c757d;
+    font-weight: 600;
+}
+
+.error-description {
+    color: #6c757d;
+    font-size: 1.1rem;
+}
+
+@media (max-width: 768px) {
+    .error-code {
+        font-size: 6rem;
+    }
+}
+</style>
+{% endblock %}

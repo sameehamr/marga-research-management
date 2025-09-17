@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Access Forbidden - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="container text-center py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="error-page">
+                <h1 class="error-code display-1 text-warning">403</h1>
+                <h2 class="error-title mb-3">Access Forbidden</h2>
+                <p class="error-description mb-4">
+                    You don't have permission to access this resource. Please contact your administrator if you believe you should have access.
+                </p>
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Access Denied:</strong> Your current role does not allow you to perform this action.
+                </div>
+                <div class="error-actions">
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-primary me-2">
+                        <i class="fas fa-home me-1"></i>Go to Dashboard
+                    </a>
+                    <a href="{{ url_for('projects') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-list me-1"></i>View Projects
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.error-page {
+    padding: 2rem;
+}
+
+.error-code {
+    font-weight: 700;
+    font-size: 8rem;
+    line-height: 1;
+    margin-bottom: 1rem;
+}
+
+.error-title {
+    color: #6c757d;
+    font-weight: 600;
+}
+
+.error-description {
+    color: #6c757d;
+    font-size: 1.1rem;
+}
+
+@media (max-width: 768px) {
+    .error-code {
+        font-size: 6rem;
+    }
+}
+</style>
+{% endblock %}

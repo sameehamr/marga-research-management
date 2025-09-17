@@ -1,0 +1,26 @@
+# Core Flask dependencies
+Flask==2.3.3
+Flask-SQLAlchemy==3.0.5
+Flask-Login==0.6.3
+Werkzeug==2.3.7
+
+# Data processing
+pandas==2.0.3
+openpyxl==3.1.2
+
+# Production server
+gunicorn==21.2.0
+
+# Database drivers
+psycopg2-binary==2.9.7  # PostgreSQL
+PyMySQL==1.1.0          # MySQL (alternative)
+
+# Environment management
+python-dotenv==1.0.0
+
+# Security enhancements
+flask-limiter==3.5.0    # Rate limiting
+flask-cors==4.0.0       # CORS handling
+
+# Monitoring and logging
+structlog==23.1.0       # Better logging

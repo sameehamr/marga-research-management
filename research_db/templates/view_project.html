@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}{{ project.title }} - Marga Research Institute{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h4>Project Details</h4>
+                <div>
+                    {% if current_user.can_edit_projects() %}
+                        <a href="{{ url_for('edit_project', id=project.id) }}" class="btn btn-secondary btn-sm me-2">
+                            <i class="fas fa-edit"></i> Edit
+                        </a>
+                    {% endif %}
+                    <a href="{{ url_for('projects') }}" class="btn btn-secondary btn-sm">← Back to Projects</a>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <h2>{{ project.title }}</h2>
+                        <p class="text-muted mb-3">{{ project.project_id }}</p>
+                        
+                        {% if project.description %}
+                            <div class="mb-4">
+                                <h5>Description</h5>
+                                <p>{{ project.description }}</p>
+                            </div>
+                        {% endif %}
+                        
+                        <div class="row">
+                            {% if project.category %}
+                            <div class="col-md-6">
+                                <div class="mb-4">
+                                    <h5>Category</h5>
+                                    <p>{{ project.category }}</p>
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            {% if project.theme %}
+                            <div class="col-md-6">
+                                <div class="mb-4">
+                                    <h5>Theme</h5>
+                                    <p>{{ project.theme }}</p>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        {% if project.team_members %}
+                            <div class="mb-4">
+                                <h5>Team Members</h5>
+                                <p>{{ project.team_members }}</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6>Project Information</h6>
+                                <hr>
+                                
+                                <div class="mb-2">
+                                    <strong>Status:</strong>
+                                    <span class="badge {% if project.status == 'Active' %}bg-warning{% elif project.status == 'Completed' %}bg-success{% elif project.status == 'On Hold' %}bg-secondary{% elif project.status == 'Cancelled' %}bg-danger{% else %}bg-light{% endif %}">
+                                        {{ project.status }}
+                                    </span>
+                                </div>
+                                
+                                <div class="mb-2">
+                                    <strong>Principal Investigator:</strong><br>
+                                    {{ project.principal_investigator }}
+                                </div>
+                                
+                                {% if project.category %}
+                                <div class="mb-2">
+                                    <strong>Category:</strong><br>
+                                    {{ project.category }}
+                                </div>
+                                {% endif %}
+                                
+                                {% if project.theme %}
+                                <div class="mb-2">
+                                    <strong>Theme:</strong><br>
+                                    {{ project.theme }}
+                                </div>
+                                {% endif %}
+                                
+                                <div class="mb-2">
+                                    <strong>Start Date:</strong><br>
+                                    {{ project.start_date.strftime('%B %d, %Y') if project.start_date else 'NA' }}
+                                </div>
+                                
+                                <div class="mb-2">
+                                    <strong>End Date:</strong><br>
+                                    {{ project.end_date.strftime('%B %d, %Y') if project.end_date else 'NA' }}
+                                </div>
+                                
+                                {% if current_user.can_view_budget() %}
+                                    {% if project.budget %}
+                                        <div class="mb-2">
+                                            <strong>Budget:</strong><br>
+                                            {{ project.currency or 'Rs' }} {{ "{:,.2f}".format(project.budget) }}
+                                        </div>
+                                    {% endif %}
+                                {% endif %}
+                                
+                                {% if project.funding_source %}
+                                    <div class="mb-2">
+                                        <strong>Funding Source:</strong><br>
+                                        {{ project.funding_source }}
+                                    </div>
+                                {% endif %}
+                                
+                                <hr>
+                                <small class="text-muted">
+                                    Created: {{ project.created_at.strftime('%m/%d/%Y') if project.created_at else 'Unknown' }}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
