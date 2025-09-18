@@ -17,7 +17,7 @@
                             <div class="mb-3">
                                 <div class="alert alert-info">
                                     <i class="fas fa-info-circle"></i>
-                                    <strong>Project ID:</strong> Will be automatically generated using the end date year (e.g., PROJ-2026-001 for projects ending in 2026)
+                                    <strong>Project ID:</strong> Will be automatically generated in format PROJ-YYYY-XXX based on start date (or end date if no start date, or current year). Example: PROJ-2025-001
                                 </div>
                             </div>
                         </div>
@@ -83,7 +83,7 @@
                     <div class="mb-3">
                         <label for="principal_investigator" class="form-label">Principal Investigator <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="principal_investigator" name="principal_investigator" 
-                               placeholder="Dr. John Smith" required minlength="2" maxlength="100">
+                               placeholder="" required minlength="2" maxlength="100">
                         <div class="form-text">2-100 characters required</div>
                     </div>
 
@@ -127,7 +127,7 @@
                             <div class="mb-3">
                                 <label for="funding_source" class="form-label">Funding Source</label>
                                 <input type="text" class="form-control" id="funding_source" name="funding_source" 
-                                       placeholder="e.g., NSF, NIH, Private Grant">
+                                       placeholder="e.g., UNDP, World Bank, GCF">
                             </div>
                         </div>
                     </div>

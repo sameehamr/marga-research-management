@@ -4,48 +4,48 @@
 
 {% block content %}
 <div class="fade-in-up">
-    <div class="row mb-4">
+    <div class="row mb-4 mt-n2">
         <div class="col-12">
-            <h1 class="page-title display-6">User Management</h1>
-            <p class="lead text-muted">Manage user accounts and access levels</p>
+            <h3 class="page-title display-6 mb-1">User Management</h3>
+            <p class="lead text-muted mb-0">Manage user accounts and access levels</p>
         </div>
     </div>
 
     <!-- Add New User Form -->
-    <div class="row mb-5">
+    <div class="row mb-3">
         <div class="col-lg-6">
-            <div class="card">
+            <div class="card h-100">
                 <div class="card-header">
                     <h5 class="mb-0">Add New User</h5>
                 </div>
-                <div class="card-body">
+                <div class="card-body py-3">
                     <form method="POST">
-                        <div class="mb-3">
-                            <label for="username" class="form-label">Username <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="username" name="username" required>
+                        <div class="mb-2">
+                            <label for="username" class="form-label small mb-1 fw-normal">Username <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-sm" id="username" name="username" required>
                         </div>
                         
-                        <div class="mb-3">
-                            <label for="full_name" class="form-label">Full Name <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="full_name" name="full_name" required>
+                        <div class="mb-2">
+                            <label for="full_name" class="form-label small mb-1 fw-normal">Full Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-sm" id="full_name" name="full_name" required>
                         </div>
                         
-                        <div class="mb-3">
-                            <label for="password" class="form-label">Password <span class="text-danger">*</span></label>
-                            <input type="password" class="form-control" id="password" name="password" required>
+                        <div class="mb-2">
+                            <label for="password" class="form-label small mb-1 fw-normal">Password <span class="text-danger">*</span></label>
+                            <input type="password" class="form-control form-control-sm" id="password" name="password" required>
                         </div>
                         
-                        <div class="mb-3">
-                            <label for="role" class="form-label">Access Level <span class="text-danger">*</span></label>
-                            <select class="form-select" id="role" name="role" required>
+                        <div class="mb-2">
+                            <label for="role" class="form-label small mb-1 fw-normal">Access Level <span class="text-danger">*</span></label>
+                            <select class="form-select form-select-sm" id="role" name="role" required>
                                 <option value="">Select access level...</option>
-                                <option value="full_access">Level 1: Full Access (Add, Edit, Delete + View All)</option>
-                                <option value="view_all">Level 2: View All (View All Details Including Budget)</option>
-                                <option value="view_limited">Level 3: View Limited (View Projects Without Budget)</option>
+                                <option value="full_access">Level 1: Full Access</option>
+                                <option value="view_all">Level 2: View All</option>
+                                <option value="view_limited">Level 3: View Limited</option>
                             </select>
                         </div>
                         
-                        <button type="submit" class="btn btn-primary">Create User</button>
+                        <button type="submit" class="btn btn-primary btn-sm mt-2">Create User</button>
                     </form>
                 </div>
             </div>
@@ -53,14 +53,14 @@
         
         <!-- Access Level Guide -->
         <div class="col-lg-6">
-            <div class="card bg-light">
+            <div class="card bg-light h-100">
                 <div class="card-header">
                     <h5 class="mb-0">Access Level Guide</h5>
                 </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <h6 class="text-primary">Level 1: Full Access</h6>
-                        <ul class="mb-0">
+                <div class="card-body py-3">
+                    <div class="mb-2">
+                        <h6 class="text-primary mb-1">Level 1: Full Access</h6>
+                        <ul class="mb-0 small">
                             <li>Add new projects</li>
                             <li>Edit and delete projects</li>
                             <li>View all project details including budget</li>
@@ -69,9 +69,9 @@
                         </ul>
                     </div>
                     
-                    <div class="mb-3">
-                        <h6 class="text-info">Level 2: View All</h6>
-                        <ul class="mb-0">
+                    <div class="mb-2">
+                        <h6 class="text-info mb-1">Level 2: View All</h6>
+                        <ul class="mb-0 small">
                             <li>View all project details</li>
                             <li>View budget information</li>
                             <li>Export project data</li>
@@ -80,8 +80,8 @@
                     </div>
                     
                     <div class="mb-0">
-                        <h6 class="text-warning">Level 3: View Limited</h6>
-                        <ul class="mb-0">
+                        <h6 class="text-warning mb-1">Level 3: View Limited</h6>
+                        <ul class="mb-0 small">
                             <li>View basic project details</li>
                             <li>Cannot view budget information</li>
                             <li>Export data (without budget)</li>
@@ -96,74 +96,68 @@
     <!-- Current Users -->
     <div class="row">
         <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">Current Users</h5>
-                </div>
-                <div class="card-body">
-                    {% if users %}
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Username</th>
-                                    <th>Full Name</th>
-                                    <th>Access Level</th>
-                                    <th>Created</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for user in users %}
-                                <tr>
-                                    <td>{{ user.username }}</td>
-                                    <td>{{ user.full_name }}</td>
-                                    <td>
-                                        <span class="badge {% if user.role == 'full_access' %}bg-success{% elif user.role == 'view_all' %}bg-info{% else %}bg-warning{% endif %}">
-                                            {{ user.get_role_display() }}
-                                        </span>
-                                    </td>
-                                    <td>{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else 'Unknown' }}</td>
-                                    <td>
-                                        <div class="btn-group" role="group">
-                                            <a href="{{ url_for('edit_user', user_id=user.id) }}" 
-                                               class="btn btn-sm btn-outline-primary" title="Edit User">
-                                                <i class="fas fa-edit"></i>
-                                            </a>
-                                            
-                                            <form method="POST" action="{{ url_for('reset_user_password', user_id=user.id) }}" 
-                                                  class="d-inline" 
-                                                  onsubmit="return confirm('Generate a temporary password for {{ user.username }}?')">
-                                                <button type="submit" class="btn btn-sm btn-outline-warning" title="Reset Password">
-                                                    <i class="fas fa-key"></i>
-                                                </button>
-                                            </form>
-                                            
-                                            {% if user.id != current_user.id %}
-                                            <form method="POST" action="{{ url_for('delete_user', user_id=user.id) }}" 
-                                                  class="d-inline" 
-                                                  onsubmit="return confirm('Are you sure you want to delete {{ user.username }}? This cannot be undone.')">
-                                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete User">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </form>
-                                            {% else %}
-                                            <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="Cannot delete own account">
-                                                <i class="fas fa-ban"></i>
-                                            </button>
-                                            {% endif %}
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    {% else %}
-                    <p class="text-muted">No users found.</p>
-                    {% endif %}
-                </div>
+            <h4 class="page-title mb-3 fw-bold">Current Users</h4>
+            {% if users %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Full Name</th>
+                            <th>Access Level</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+                            <td>{{ user.username }}</td>
+                            <td>{{ user.full_name }}</td>
+                            <td>
+                                <span class="badge {% if user.role == 'full_access' %}bg-success{% elif user.role == 'view_all' %}bg-info{% else %}bg-warning{% endif %}">
+                                    {{ user.get_role_display() }}
+                                </span>
+                            </td>
+                            <td>{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else 'Unknown' }}</td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <a href="{{ url_for('edit_user', user_id=user.id) }}" 
+                                       class="btn btn-sm btn-outline-primary" title="Edit User">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    
+                                    <form method="POST" action="{{ url_for('reset_user_password', user_id=user.id) }}" 
+                                          class="d-inline" 
+                                          onsubmit="return confirm('Generate a temporary password for {{ user.username }}?')">
+                                        <button type="submit" class="btn btn-sm btn-outline-warning" title="Reset Password">
+                                            <i class="fas fa-key"></i>
+                                        </button>
+                                    </form>
+                                    
+                                    {% if user.id != current_user.id %}
+                                    <form method="POST" action="{{ url_for('delete_user', user_id=user.id) }}" 
+                                          class="d-inline" 
+                                          onsubmit="return confirm('Are you sure you want to delete {{ user.username }}? This cannot be undone.')">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete User">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                    {% else %}
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" disabled title="Cannot delete own account">
+                                        <i class="fas fa-ban"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
+            {% else %}
+            <p class="text-muted">No users found.</p>
+            {% endif %}
         </div>
     </div>
 </div>

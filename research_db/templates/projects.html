@@ -42,12 +42,9 @@
             <a href="{{ url_for('add_project') }}" class="btn btn-primary btn-sm filter-btn">
                 <i class="fas fa-plus me-2"></i>Add New Project
             </a>
-            <a href="{{ url_for('bulk_import') }}" class="btn btn-outline-primary btn-sm filter-btn">
+            <a href="{{ url_for('bulk_import') }}" class="btn btn-primary btn-sm filter-btn">
                 <i class="fas fa-upload me-2"></i>Bulk Import
             </a>
-            <button type="button" class="btn btn-outline-danger btn-sm filter-btn" onclick="confirmClearAllProjects()">
-                <i class="fas fa-trash me-2"></i>Clear All Projects
-            </button>
         {% endif %}
         <a href="{{ url_for('export_projects_csv', 
                           search=search_query or '', 
@@ -358,19 +355,5 @@
     </div>
     {% endif %}
 </div>
-
-<!-- Hidden form for clearing all projects -->
-<form id="clearAllProjectsForm" method="POST" action="{{ url_for('clear_all_projects') }}" style="display: none;">
-</form>
-
-<script>
-function confirmClearAllProjects() {
-    if (confirm('⚠️ WARNING: This will permanently delete ALL projects in the database!\n\nThis action cannot be undone. Are you absolutely sure you want to proceed?\n\nClick OK to delete all projects or Cancel to abort.')) {
-        if (confirm('🚨 FINAL CONFIRMATION: You are about to delete ALL projects!\n\nThis will remove all project data permanently. Please confirm this is what you want to do.')) {
-            document.getElementById('clearAllProjectsForm').submit();
-        }
-    }
-}
-</script>
 
 {% endblock %}

@@ -644,14 +644,14 @@ def dashboard():
             'projects_without_budget': total_projects - len(projects_with_budget)
         }
     
-    # Get recent projects (last 5)
-    recent_projects = Project.query.order_by(Project.created_at.desc()).limit(5).all()
+    # Get recent projects (last 5) - sorted by end date, then creation date
+    recent_projects = Project.query.order_by(Project.end_date.desc().nullslast(), Project.created_at.desc()).limit(5).all()
     
     # Get active projects for display
     current_active_projects = Project.query.filter_by(status='Active').order_by(Project.start_date.desc()).limit(10).all()
     
-    # Get all projects for display (last 10)
-    all_recent_projects = Project.query.order_by(Project.created_at.desc()).limit(10).all()
+    # Get all projects for display (last 10) - sorted by end date, then creation date
+    all_recent_projects = Project.query.order_by(Project.end_date.desc().nullslast(), Project.created_at.desc()).limit(10).all()
     
     # Get next project ID for admin users (using current year as example)
     next_project_id = generate_project_id() if current_user.can_edit_projects() else None
@@ -673,7 +673,7 @@ def dashboard():
 @app.route('/all-projects')
 @login_required
 def all_projects():
-    all_projects = Project.query.order_by(Project.created_at.desc()).all()
+    all_projects = Project.query.order_by(Project.end_date.desc().nullslast(), Project.created_at.desc()).all()
     return render_template('projects.html', projects=all_projects)
 
 @app.route('/projects')
@@ -690,7 +690,7 @@ def projects():
     end_date_filter = request.args.get('end_date', '')
     
     # Get sorting parameters
-    sort_by = request.args.get('sort', 'created_at')  # Default sort by created_at
+    sort_by = request.args.get('sort', 'end_date')  # Default sort by end_date
     sort_order = request.args.get('order', 'desc')   # Default descending order (newest first)
     
     # Start with base query
@@ -776,8 +776,8 @@ def projects():
             else:
                 query = query.order_by(sort_column.desc())
     else:
-        # Default sort
-        query = query.order_by(Project.created_at.desc())
+        # Default sort by end date (most recent first), then by created_at for projects without end dates
+        query = query.order_by(Project.end_date.desc().nullslast(), Project.created_at.desc())
     
     # Get filtered results
     projects = query.all()
@@ -2615,37 +2615,6 @@ def health_check():
             'timestamp': datetime.now().isoformat(),
             'error': str(e)
         }, 503
-
-@app.route('/clear-all-projects', methods=['POST'])
-@login_required
-def clear_all_projects():
-    """Clear all projects from the database - ADMIN ONLY"""
-    if not current_user.can_edit_projects():
-        flash('Access denied. Full access privileges required.', 'error')
-        return redirect(url_for('projects'))
-    
-    try:
-        # Get count before deletion
-        project_count = Project.query.count()
-        
-        # Delete all projects
-        Project.query.delete()
-        db.session.commit()
-        
-        # Log the action
-        log_user_activity('bulk_delete', 'project', 'all', {
-            'action': 'cleared_all_projects',
-            'count': project_count,
-            'reason': 'Fresh import preparation'
-        })
-        
-        flash(f'Successfully deleted {project_count} projects from the database.', 'success')
-        
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Error clearing projects: {str(e)}', 'error')
-    
-    return redirect(url_for('projects'))
 
 if __name__ == '__main__':
     print("="*50)
