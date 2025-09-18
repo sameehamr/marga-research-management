@@ -341,11 +341,68 @@ def validate_bulk_import_data(df):
     if df.empty:
         issues.append("The file contains no data rows.")
     
-    # Check for duplicate titles
+    # Check for duplicate titles with similar dates
     if 'title' in df.columns:
-        duplicates = df[df['title'].duplicated()]['title'].tolist()
-        if duplicates:
-            issues.append(f"Duplicate titles found in import file: {', '.join(duplicates[:5])}")
+        # Get columns for dates
+        date_cols = {}
+        for col in df.columns:
+            col_lower = col.lower().strip()
+            if col_lower in ['start date', 'start_date', 'begin date', 'commencement']:
+                date_cols['start'] = col
+            elif col_lower in ['end date', 'end_date', 'finish date', 'completion']:
+                date_cols['end'] = col
+        
+        # Check for duplicates based on title and dates
+        duplicate_groups = []
+        df_copy = df.copy()
+        df_copy['title_clean'] = df_copy['title'].str.strip().str.lower()
+        
+        # Group by title
+        title_groups = df_copy.groupby('title_clean')
+        
+        for title, group in title_groups:
+            if len(group) > 1:
+                # Check if dates are similar for duplicates
+                similar_found = False
+                for i in range(len(group)):
+                    for j in range(i + 1, len(group)):
+                        row1 = group.iloc[i]
+                        row2 = group.iloc[j]
+                        
+                        # Compare dates if available
+                        dates_similar = True
+                        if date_cols.get('start') and pd.notna(row1[date_cols['start']]) and pd.notna(row2[date_cols['start']]):
+                            try:
+                                date1 = pd.to_datetime(row1[date_cols['start']])
+                                date2 = pd.to_datetime(row2[date_cols['start']])
+                                # Consider dates similar if within 30 days
+                                if abs((date1 - date2).days) > 30:
+                                    dates_similar = False
+                            except:
+                                pass
+                        
+                        if date_cols.get('end') and pd.notna(row1[date_cols['end']]) and pd.notna(row2[date_cols['end']]):
+                            try:
+                                date1 = pd.to_datetime(row1[date_cols['end']])
+                                date2 = pd.to_datetime(row2[date_cols['end']])
+                                # Consider dates similar if within 30 days
+                                if abs((date1 - date2).days) > 30:
+                                    dates_similar = False
+                            except:
+                                pass
+                        
+                        if dates_similar:
+                            duplicate_groups.append(row1['title'])
+                            similar_found = True
+                            break
+                    if similar_found:
+                        break
+        
+        if duplicate_groups:
+            unique_duplicates = list(set(duplicate_groups))
+            issues.append(f"Duplicate projects found (same title and similar dates): {', '.join(unique_duplicates[:5])}")
+            if len(unique_duplicates) > 5:
+                issues.append(f"... and {len(unique_duplicates) - 5} more duplicates")
     
     # Check for invalid dates
     date_columns = ['start date', 'start_date', 'end date', 'end_date']
@@ -1654,6 +1711,103 @@ def generate_unique_project_ids_for_batch(projects):
             project_number = start_number + i
             project.project_id = f"PROJ-{year}-{project_number:03d}"
 
+def check_project_duplicate(title, start_date_str, end_date_str):
+    """
+    Check if a project is a duplicate based on title and dates.
+    Returns True if duplicate (same title and similar dates), False otherwise.
+    """
+    # Find projects with the same title
+    existing_projects = Project.query.filter_by(title=title.strip()).all()
+    
+    if not existing_projects:
+        return False
+    
+    # Parse incoming dates
+    new_start_date = None
+    new_end_date = None
+    
+    if start_date_str:
+        try:
+            new_start_date = pd.to_datetime(start_date_str).date()
+        except:
+            pass
+    
+    if end_date_str:
+        try:
+            new_end_date = pd.to_datetime(end_date_str).date()
+        except:
+            pass
+    
+    # Check each existing project
+    for existing in existing_projects:
+        dates_similar = True
+        
+        # Compare start dates
+        if new_start_date and existing.start_date:
+            days_diff = abs((new_start_date - existing.start_date).days)
+            if days_diff > 30:  # More than 30 days difference
+                dates_similar = False
+        elif new_start_date or existing.start_date:
+            # One has start date, other doesn't - consider different unless both are None
+            if new_start_date != existing.start_date:
+                dates_similar = False
+        
+        # Compare end dates
+        if new_end_date and existing.end_date:
+            days_diff = abs((new_end_date - existing.end_date).days)
+            if days_diff > 30:  # More than 30 days difference
+                dates_similar = False
+        elif new_end_date or existing.end_date:
+            # One has end date, other doesn't - consider different unless both are None
+            if new_end_date != existing.end_date:
+                dates_similar = False
+        
+        # If dates are similar, consider it a duplicate
+        if dates_similar:
+            return True
+    
+    return False
+
+def normalize_status_value(status_value):
+    """Normalize status value to match valid status options"""
+    if not status_value:
+        return 'Active'  # Default status
+    
+    # Convert to string and normalize
+    status_str = str(status_value).strip()
+    status_lower = status_str.lower()
+    
+    # Valid statuses (case-insensitive mapping)
+    status_mapping = {
+        'active': 'Active',
+        'on hold': 'On Hold',
+        'onhold': 'On Hold',
+        'hold': 'On Hold',
+        'paused': 'On Hold',
+        'completed': 'Completed',
+        'complete': 'Completed',
+        'finished': 'Completed',
+        'done': 'Completed',
+        'cancelled': 'Cancelled',
+        'canceled': 'Cancelled',  # American spelling
+        'terminated': 'Cancelled',
+        'stopped': 'Cancelled',
+        'abandoned': 'Cancelled'
+    }
+    
+    # Try exact match first
+    if status_lower in status_mapping:
+        return status_mapping[status_lower]
+    
+    # Try partial matches
+    for key, value in status_mapping.items():
+        if key in status_lower or status_lower in key:
+            return value
+    
+    # If no match found, default to Active
+    print(f"Warning: Unknown status '{status_str}' found in import, defaulting to 'Active'")
+    return 'Active'
+
 def process_import_data(df, skip_duplicates=False):
     """Process imported DataFrame and create Project objects"""
     processed_projects = []
@@ -1694,10 +1848,12 @@ def process_import_data(df, skip_duplicates=False):
             if not title or not pi:
                 continue
             
-            # Check for duplicates if requested
+            # Check for duplicates if requested (enhanced checking with dates)
             if skip_duplicates:
-                existing = Project.query.filter_by(title=title).first()
-                if existing:
+                is_duplicate = check_project_duplicate(title, 
+                                                     row.get(mapped_columns.get('start_date', ''), ''),
+                                                     row.get(mapped_columns.get('end_date', ''), ''))
+                if is_duplicate:
                     continue
             
             # Create project object
@@ -1707,7 +1863,11 @@ def process_import_data(df, skip_duplicates=False):
             project.description = row.get(mapped_columns.get('description', ''), '') or 'Not specified'
             project.category = row.get(mapped_columns.get('category', ''), '') or None
             project.theme = row.get(mapped_columns.get('theme', ''), '') or None
-            project.status = row.get(mapped_columns.get('status', ''), 'Active') or 'Active'
+            
+            # Handle status with validation and normalization
+            raw_status = row.get(mapped_columns.get('status', ''), 'Active') or 'Active'
+            project.status = normalize_status_value(raw_status)
+            
             project.team_members = row.get(mapped_columns.get('team_members', ''), '') or ''
             project.funding_source = row.get(mapped_columns.get('funding_source', ''), '') or ''
             
@@ -1784,9 +1944,11 @@ def import_projects_to_db(projects):
     
     for project in projects:
         try:
-            # Check for duplicates one more time
-            existing = Project.query.filter_by(title=project.title).first()
-            if existing:
+            # Check for duplicates one more time (enhanced checking with dates)
+            is_duplicate = check_project_duplicate(project.title, 
+                                                 project.start_date.strftime('%Y-%m-%d') if project.start_date else '',
+                                                 project.end_date.strftime('%Y-%m-%d') if project.end_date else '')
+            if is_duplicate:
                 results['skipped_count'] += 1
                 continue
             
