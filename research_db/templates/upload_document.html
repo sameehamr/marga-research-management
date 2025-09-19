@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Document - {{ project.title }} - Marga Research Institute{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h4>
+                    <i class="fas fa-upload me-2"></i>Upload Document - {{ project.title }}
+                </h4>
+                <a href="{{ url_for('project_documents', project_id=project.id) }}" class="btn btn-secondary btn-sm">
+                    <i class="fas fa-arrow-left me-1"></i>Back to Documents
+                </a>
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="document" class="form-label">Document File <span class="text-danger">*</span></label>
+                        <input type="file" class="form-control" id="document" name="document"
+                               accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.jpg,.jpeg,.png,.gif" required>
+                        <div class="form-text">
+                            Allowed file types: PDF, Word (.doc, .docx), Excel (.xls, .xlsx), PowerPoint (.ppt, .pptx), Text (.txt), Images (.jpg, .jpeg, .png, .gif)
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="document_type" class="form-label">Document Type <span class="text-danger">*</span></label>
+                        <select class="form-select" id="document_type" name="document_type" required>
+                            <option value="">Select document type...</option>
+                            <option value="contract">Contract</option>
+                            <option value="report">Report</option>
+                            <option value="deliverable">Deliverable</option>
+                        </select>
+                        <div class="form-text">
+                            <strong>Contract:</strong> Legal agreements, MoUs, contracts<br>
+                            <strong>Report:</strong> Progress reports, final reports, evaluations<br>
+                            <strong>Deliverable:</strong> Project outputs, publications, tools, datasets
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="3"
+                                  placeholder="Optional description of the document"></textarea>
+                        <div class="form-text">Provide a brief description of what this document contains</div>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('project_documents', project_id=project.id) }}" class="btn btn-secondary me-md-2">
+                            <i class="fas fa-times me-1"></i>Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-upload me-1"></i>Upload Document
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// File validation
+document.getElementById('document').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const allowedTypes = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'jpg', 'jpeg', 'png', 'gif'];
+        const fileExtension = file.name.split('.').pop().toLowerCase();
+
+        if (!allowedTypes.includes(fileExtension)) {
+            alert('Invalid file type. Please select a file with one of these extensions: ' + allowedTypes.join(', '));
+            e.target.value = '';
+            return;
+        }
+
+        // Check file size (max 50MB)
+        const maxSize = 50 * 1024 * 1024; // 50MB in bytes
+        if (file.size > maxSize) {
+            alert('File size too large. Maximum allowed size is 50MB.');
+            e.target.value = '';
+            return;
+        }
+    }
+});
+
+// Form validation
+document.querySelector('form').addEventListener('submit', function(e) {
+    const fileInput = document.getElementById('document');
+    const docTypeSelect = document.getElementById('document_type');
+
+    if (!fileInput.files[0]) {
+        alert('Please select a file to upload.');
+        e.preventDefault();
+        return;
+    }
+
+    if (!docTypeSelect.value) {
+        alert('Please select a document type.');
+        e.preventDefault();
+        return;
+    }
+
+    // Show loading state
+    const submitBtn = document.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Uploading...';
+    submitBtn.disabled = true;
+
+    // Re-enable button after 10 seconds (in case of error)
+    setTimeout(() => {
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    }, 10000);
+});
+</script>
+{% endblock %}

@@ -45,7 +45,7 @@
                         <label for="description" class="form-label">Description</label>
                         <textarea class="form-control" id="description" name="description" rows="4" 
                                   placeholder="Detailed description of the research project" maxlength="5000"></textarea>
-                        <div class="form-text">Maximum 5000 characters</div>
+                        
                     </div>
 
                     <div class="row">
@@ -82,16 +82,28 @@
 
                     <div class="mb-3">
                         <label for="principal_investigator" class="form-label">Principal Investigator <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="principal_investigator" name="principal_investigator" 
-                               placeholder="" required minlength="2" maxlength="100">
-                        <div class="form-text">2-100 characters required</div>
+                        <select class="form-select" id="principal_investigator" name="principal_investigator" required>
+                            <option value="">Select Principal Investigator...</option>
+                            {% for user in users %}
+                            <option value="{{ user.full_name }}">{{ user.full_name }} ({{ user.username }})</option>
+                            {% endfor %}
+                        </select>
+                      
                     </div>
 
+                    <!-- Team Members Section -->
                     <div class="mb-3">
-                        <label for="team_members" class="form-label">Team Members</label>
-                        <textarea class="form-control" id="team_members" name="team_members" rows="3" 
-                                  placeholder="List team members (one per line or comma-separated)"></textarea>
+                        <label class="form-label">Team Members & Roles</label>
+                        <div id="team-members-container" class="mb-0">
+                            <!-- Team member entries will be added here dynamically -->
+                        </div>
+                        <button type="button" class="btn btn-outline-primary btn-sm py-1 px-2 mt-0" id="add-team-member">
+                            <i class="fas fa-plus me-1"></i>Add 
+                        </button>
                     </div>
+
+                    <!-- Hidden field for team members data -->
+                    <input type="hidden" id="team_members_data" name="team_members_data" value="[]">
 
                     <div class="row">
                         <div class="col-md-6">
@@ -120,7 +132,7 @@
                                     <input type="number" class="form-control" id="budget" name="budget" 
                                            step="0.01" min="0" max="10000000000" placeholder="0.00">
                                 </div>
-                                <small class="text-muted">Select currency and enter amount</small>
+                                
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -249,6 +261,99 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
         }
     });
+});
+
+// Team Members Management
+document.addEventListener('DOMContentLoaded', function() {
+    const teamMembersContainer = document.getElementById('team-members-container');
+    const addTeamMemberBtn = document.getElementById('add-team-member');
+    const teamMembersDataInput = document.getElementById('team_members_data');
+    let teamMemberCount = 0;
+
+    // Common roles for research projects
+    const commonRoles = [
+        'Research Assistant',
+        'Co-Investigator',
+        'Data Analyst',
+        'Field Coordinator',
+        'Project Manager',
+        'Statistician',
+        'Lab Technician',
+        'Survey Coordinator',
+        'Content Writer',
+        'Other'
+    ];
+
+    function createTeamMemberEntry() {
+        teamMemberCount++;
+        const entryDiv = document.createElement('div');
+        entryDiv.className = 'team-member-entry mb-1';
+        entryDiv.dataset.id = teamMemberCount;
+
+        entryDiv.innerHTML = `
+            <div class="row g-2 align-items-end">
+                <div class="col-md-5">
+                    <label class="form-label small">Team Member</label>
+                    <select class="form-select form-select-sm team-member-select" required>
+                        <option value="">Select a user...</option>
+                        {% for user in users %}
+                        <option value="{{ user.id }}">{{ user.full_name }} ({{ user.username }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label small">Role</label>
+                    <select class="form-select form-select-sm role-select" required>
+                        <option value="">Select a role...</option>
+                        ${commonRoles.map(role => `<option value="${role}">${role}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="button" class="btn btn-outline-danger btn-sm remove-team-member">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+
+        // Add event listener to remove button
+        entryDiv.querySelector('.remove-team-member').addEventListener('click', function() {
+            entryDiv.remove();
+            updateTeamMembersData();
+        });
+
+        // Add event listeners to update data when selections change
+        entryDiv.querySelector('.team-member-select').addEventListener('change', updateTeamMembersData);
+        entryDiv.querySelector('.role-select').addEventListener('change', updateTeamMembersData);
+
+        teamMembersContainer.appendChild(entryDiv);
+        return entryDiv;
+    }
+
+    function updateTeamMembersData() {
+        const teamMembers = [];
+        document.querySelectorAll('.team-member-entry').forEach(entry => {
+            const userSelect = entry.querySelector('.team-member-select');
+            const roleSelect = entry.querySelector('.role-select');
+
+            if (userSelect.value && roleSelect.value) {
+                teamMembers.push({
+                    user_id: parseInt(userSelect.value),
+                    role: roleSelect.value
+                });
+            }
+        });
+
+        teamMembersDataInput.value = JSON.stringify(teamMembers);
+    }
+
+    // Add team member button click handler
+    addTeamMemberBtn.addEventListener('click', function() {
+        createTeamMemberEntry();
+    });
+
+    // Add initial team member entry
+    createTeamMemberEntry();
 });
 </script>
 {% endblock %}

@@ -60,6 +60,21 @@ class Project(db.Model):
     def __repr__(self):
         return f'<Project {self.project_id}: {self.title}>'
 
+class ProjectTeamMember(db.Model):
+    """Project team member model for assigning users to projects with roles"""
+    id = db.Column(db.Integer, primary_key=True)
+    project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    role = db.Column(db.String(50), nullable=False)  # e.g., 'Research Assistant', 'Co-Investigator', 'Data Analyst', etc.
+    assigned_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    project = db.relationship('Project', backref=db.backref('team_memberships', lazy=True))
+    user = db.relationship('User', backref=db.backref('project_assignments', lazy=True))
+    
+    def __repr__(self):
+        return f'<ProjectTeamMember {self.user.username} as {self.role} on {self.project.title}>'
+
 class AuditLog(db.Model):
     """Audit log model for tracking user activities"""
     id = db.Column(db.Integer, primary_key=True)
@@ -136,6 +151,45 @@ class ErrorLog(db.Model):
             except:
                 return {}
         return {}
+
+class Document(db.Model):
+    """Document model for storing project-related files (contracts, reports, deliverables)"""
+    id = db.Column(db.Integer, primary_key=True)
+    project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=False)
+    filename = db.Column(db.String(255), nullable=False)  # Unique filename on disk
+    original_filename = db.Column(db.String(255), nullable=False)  # Original uploaded filename
+    file_path = db.Column(db.String(500), nullable=False)  # Full path to file on disk
+    file_type = db.Column(db.String(10), nullable=False)  # File extension (pdf, doc, docx, etc.)
+    file_size = db.Column(db.Integer, nullable=False)  # File size in bytes
+    uploaded_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    document_type = db.Column(db.String(20), nullable=False)  # contract, report, deliverable
+    description = db.Column(db.Text)  # Optional description of the document
+    
+    # Relationships
+    project = db.relationship('Project', backref=db.backref('documents', lazy=True, order_by='Document.uploaded_at.desc()'))
+    uploader = db.relationship('User', backref=db.backref('uploaded_documents', lazy=True))
+    
+    def __repr__(self):
+        return f'<Document {self.original_filename} ({self.document_type}) for {self.project.title}>'
+    
+    def get_file_size_display(self):
+        """Return human-readable file size"""
+        size = self.file_size
+        for unit in ['B', 'KB', 'MB', 'GB']:
+            if size < 1024.0:
+                return f"{size:.1f} {unit}"
+            size /= 1024.0
+        return f"{size:.1f} TB"
+    
+    def get_document_type_display(self):
+        """Return human-readable document type"""
+        type_names = {
+            'contract': 'Contract',
+            'report': 'Report',
+            'deliverable': 'Deliverable'
+        }
+        return type_names.get(self.document_type, self.document_type.title())
 
 def init_database(app):
     """Initialize database with tables and default data"""

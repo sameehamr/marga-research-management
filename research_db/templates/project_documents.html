@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}Documents - {{ project.title }} - Marga Research Institute{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h4>
+                    <i class="fas fa-file-alt me-2"></i>Documents - {{ project.title }}
+                </h4>
+                <div>
+                    
+                    <a href="{{ url_for('view_project', id=project.id) }}" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-arrow-left me-1"></i>Back to Project
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if not documents_by_type %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No Documents Yet</h5>
+                        <p class="text-muted mb-3">No documents have been uploaded for this project yet.</p>
+                        {% if current_user.can_edit_projects() %}
+                            <a href="{{ url_for('upload_document', project_id=project.id) }}" class="btn btn-primary btn-sm">
+                                <i class="fas fa-upload me-1"></i>Add Document
+                            </a>
+                        {% endif %}
+                    </div>
+                {% else %}
+                    {% for doc_type, documents in documents_by_type.items() %}
+                        <div class="mb-4">
+                            <h5 class="mb-3">
+                                <i class="fas fa-{{ 'file-contract' if doc_type == 'contract' else 'chart-line' if doc_type == 'report' else 'gift' }} me-2"></i>
+                                {{ doc_type.title() }}s
+                                <span class="badge bg-secondary ms-2">{{ documents|length }}</span>
+                            </h5>
+
+                            <div class="row">
+                                {% for document in documents %}
+                                    <div class="col-md-6 col-lg-4 mb-3">
+                                        <div class="card h-100 border">
+                                            <div class="card-body d-flex flex-column">
+                                                <div class="d-flex align-items-start mb-2">
+                                                    <div class="flex-grow-1">
+                                                        <h6 class="card-title mb-1">
+                                                            <i class="fas fa-file-{{ 'pdf' if document.file_type == 'pdf' else 'word' if document.file_type in ['doc', 'docx'] else 'excel' if document.file_type in ['xls', 'xlsx'] else 'image' if document.file_type in ['jpg', 'jpeg', 'png', 'gif'] else 'alt' }} me-2 text-primary"></i>
+                                                            {{ document.original_filename }}
+                                                        </h6>
+                                                        {% if document.description %}
+                                                            <p class="card-text small text-muted mb-2">{{ document.description }}</p>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+
+                                                <div class="mt-auto">
+                                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                                        <small class="text-muted">
+                                                            <i class="fas fa-user me-1"></i>{{ document.uploader.full_name }}
+                                                        </small>
+                                                        <small class="text-muted">
+                                                            <i class="fas fa-calendar me-1"></i>{{ document.uploaded_at.strftime('%Y-%m-%d') }}
+                                                        </small>
+                                                    </div>
+
+                                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                                        <small class="text-muted">
+                                                            <i class="fas fa-weight me-1"></i>{{ document.get_file_size_display() }}
+                                                        </small>
+                                                        <small class="badge bg-{{ 'success' if doc_type == 'contract' else 'info' if doc_type == 'report' else 'warning' }}">
+                                                            {{ document.get_document_type_display() }}
+                                                        </small>
+                                                    </div>
+
+                                                    <div class="d-flex gap-1">
+                                                        <a href="{{ url_for('download_document', document_id=document.id) }}"
+                                                           class="btn btn-outline-primary btn-sm flex-fill"
+                                                           title="Download">
+                                                            <i class="fas fa-download me-1"></i>Download
+                                                        </a>
+                                                        {% if current_user.can_edit_projects() %}
+                                                            <button type="button" class="btn btn-outline-danger btn-sm"
+                                                                    onclick="confirmDelete({{ document.id }}, '{{ document.original_filename }}')"
+                                                                    title="Delete">
+                                                                <i class="fas fa-trash"></i>
+                                                            </button>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+{% if current_user.can_edit_projects() %}
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-trash me-2"></i>Confirm Delete
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the document <strong id="deleteDocName"></strong>?</p>
+                <p class="text-danger mb-0">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-1"></i>Delete Document
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+function confirmDelete(documentId, filename) {
+    document.getElementById('deleteDocName').textContent = filename;
+    document.getElementById('deleteForm').action = `/document/${documentId}/delete`;
+
+    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    modal.show();
+}
+</script>
+{% endblock %}

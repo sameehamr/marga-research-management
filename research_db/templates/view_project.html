@@ -50,10 +50,20 @@
                             {% endif %}
                         </div>
                         
-                        {% if project.team_members %}
+                        {% if project.team_memberships %}
                             <div class="mb-4">
                                 <h5>Team Members</h5>
-                                <p>{{ project.team_members }}</p>
+                                <div class="row">
+                                    {% for membership in project.team_memberships %}
+                                    <div class="col-md-6 mb-2">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <strong>{{ membership.user.full_name }}</strong>
+                                            <span class="badge bg-info">{{ membership.role }}</span>
+                                        </div>
+                                        <small class="text-muted">{{ membership.user.username }}</small>
+                                    </div>
+                                    {% endfor %}
+                                </div>
                             </div>
                         {% endif %}
                     </div>
@@ -123,6 +133,79 @@
                             </div>
                         </div>
                     </div>
+                </div>
+
+                <!-- Documents Section -->
+                <div class="mt-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4 class="mb-0">
+                            <i class="fas fa-file-alt me-2"></i>Project Documents
+                        </h4>
+                        <div>
+                            <a href="{{ url_for('project_documents', project_id=project.id) }}" class="btn btn-primary btn-sm">
+                                <i class="fas fa-eye me-1"></i>View All Documents
+                            </a>
+                            {% if current_user.can_edit_projects() %}
+                                <a href="{{ url_for('upload_document', project_id=project.id) }}" class="btn btn-primary btn-sm ms-2">
+                                    <i class="fas fa-upload me-1"></i>Upload Document
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {% if project.documents %}
+                        <div class="row">
+                            {% for document in project.documents[:6] %} <!-- Show first 6 documents -->
+                                <div class="col-md-6 col-lg-4 mb-3">
+                                    <div class="card h-100 border">
+                                        <div class="card-body d-flex flex-column">
+                                            <div class="d-flex align-items-start mb-2">
+                                                <div class="flex-grow-1">
+                                                    <h6 class="card-title mb-1">
+                                                        <i class="fas fa-file-{{ 'pdf' if document.file_type == 'pdf' else 'word' if document.file_type in ['doc', 'docx'] else 'excel' if document.file_type in ['xls', 'xlsx'] else 'image' if document.file_type in ['jpg', 'jpeg', 'png', 'gif'] else 'alt' }} me-2 text-primary"></i>
+                                                        {{ document.original_filename[:30] }}{% if document.original_filename|length > 30 %}...{% endif %}
+                                                    </h6>
+                                                    {% if document.description %}
+                                                        <p class="card-text small text-muted mb-2">{{ document.description[:50] }}{% if document.description|length > 50 %}...{% endif %}</p>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+
+                                            <div class="mt-auto">
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-user me-1"></i>{{ document.uploader.full_name[:15] }}{% if document.uploader.full_name|length > 15 %}...{% endif %}
+                                                    </small>
+                                                    <small class="badge bg-{{ 'success' if document.document_type == 'contract' else 'info' if document.document_type == 'report' else 'warning' }}">
+                                                        {{ document.get_document_type_display() }}
+                                                    </small>
+                                                </div>
+
+                                                <a href="{{ url_for('download_document', document_id=document.id) }}"
+                                                   class="btn btn-outline-primary btn-sm w-100"
+                                                   title="Download {{ document.original_filename }}">
+                                                    <i class="fas fa-download me-1"></i>Download
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+
+                        {% if project.documents|length > 6 %}
+                            <div class="text-center">
+                                <a href="{{ url_for('project_documents', project_id=project.id) }}" class="btn btn-outline-secondary">
+                                    <i class="fas fa-plus me-1"></i>View {{ project.documents|length - 6 }} More Documents
+                                </a>
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center py-4 bg-light rounded">
+                            <i class="fas fa-file-alt fa-2x text-muted mb-2"></i>
+                            <p class="text-muted mb-2">No documents uploaded yet</p>
+                        </div>
+                    {% endif %}
                 </div>
             </div>
         </div>

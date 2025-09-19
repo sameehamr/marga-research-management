@@ -1,7 +1,7 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session, Response
+from flask import Flask, render_template, request, redirect, url_for, flash, session, Response, send_file
 from flask_login import LoginManager, login_required, current_user, login_user, logout_user
 from werkzeug.security import check_password_hash
-from models import db, User, Project, AuditLog, ProjectStatusHistory, ErrorLog
+from models import db, User, Project, ProjectTeamMember, AuditLog, ProjectStatusHistory, ErrorLog, Document
 import os
 import csv
 import io
@@ -205,8 +205,12 @@ def validate_project_data(form_data, is_edit=False, existing_project=None):
     
     if not principal_investigator:
         errors.append("Principal Investigator is required.")
-    elif len(principal_investigator) < 2:
-        errors.append("Principal Investigator name must be at least 2 characters long.")
+    else:
+        # Validate that the principal investigator is a valid user
+        from models import User
+        user = User.query.filter_by(full_name=principal_investigator).first()
+        if not user:
+            errors.append("Please select a valid Principal Investigator from the list.")
     
     # Date validation
     start_date_str = form_data.get('start_date', '').strip()
@@ -688,6 +692,8 @@ def projects():
     currency_filter = request.args.get('currency', '').strip()
     start_date_filter = request.args.get('start_date', '')
     end_date_filter = request.args.get('end_date', '')
+    budget_min = request.args.get('budget_min', '').strip()
+    budget_max = request.args.get('budget_max', '').strip()
     
     # Get sorting parameters
     sort_by = request.args.get('sort', 'end_date')  # Default sort by end_date
@@ -734,6 +740,21 @@ def projects():
     if currency_filter:
         query = query.filter(Project.currency == currency_filter)
     
+    # Apply budget range filters
+    if budget_min:
+        try:
+            min_budget = float(budget_min)
+            query = query.filter(Project.budget >= min_budget)
+        except ValueError:
+            pass  # Invalid budget_min, skip filter
+    
+    if budget_max:
+        try:
+            max_budget = float(budget_max)
+            query = query.filter(Project.budget <= max_budget)
+        except ValueError:
+            pass  # Invalid budget_max, skip filter
+    
     # Apply date range filters
     if start_date_filter:
         from datetime import datetime
@@ -761,23 +782,8 @@ def projects():
         'created_at': Project.created_at
     }
     
-    if sort_by in valid_sort_columns:
-        sort_column = valid_sort_columns[sort_by]
-        if sort_order == 'asc':
-            # Handle null values for date sorting - put nulls last
-            if sort_by in ['start_date', 'end_date', 'budget']:
-                query = query.order_by(sort_column.asc().nullslast())
-            else:
-                query = query.order_by(sort_column.asc())
-        else:
-            # Handle null values for date sorting - put nulls last
-            if sort_by in ['start_date', 'end_date', 'budget']:
-                query = query.order_by(sort_column.desc().nullslast())
-            else:
-                query = query.order_by(sort_column.desc())
-    else:
-        # Default sort by end date (most recent first), then by created_at for projects without end dates
-        query = query.order_by(Project.end_date.desc().nullslast(), Project.created_at.desc())
+    # Simple sorting by project_id in descending order (highest numbers first)
+    query = query.order_by(Project.project_id.desc())
     
     # Get filtered results
     projects = query.all()
@@ -813,6 +819,8 @@ def projects():
                          currency_filter=currency_filter,
                          start_date_filter=start_date_filter,
                          end_date_filter=end_date_filter,
+                         budget_min=budget_min,
+                         budget_max=budget_max,
                          sort_by=sort_by,
                          sort_order=sort_order)
 
@@ -828,6 +836,8 @@ def export_projects_csv():
     funding_source_filter = request.args.get('funding_source', '').strip()
     start_date_filter = request.args.get('start_date', '')
     end_date_filter = request.args.get('end_date', '')
+    budget_min = request.args.get('budget_min', '').strip()
+    budget_max = request.args.get('budget_max', '').strip()
     
     # Start with base query
     query = Project.query
@@ -1125,7 +1135,7 @@ def add_project():
                 end_date=validated_data['end_date_obj'],
                 status=validated_data['status'],
                 principal_investigator=validated_data['principal_investigator'],
-                team_members=validated_data['team_members'],
+                team_members='',  # Keep empty for backward compatibility
                 budget=validated_data['budget_val'],
                 currency=validated_data['currency'],
                 funding_source=validated_data['funding_source'],
@@ -1134,6 +1144,24 @@ def add_project():
             )
             
             db.session.add(project)
+            db.session.flush()  # Get project ID without committing
+            
+            # Handle team members assignment
+            team_members_data = request.form.get('team_members_data', '[]')
+            try:
+                team_members = json.loads(team_members_data) if team_members_data else []
+                for member_data in team_members:
+                    if member_data.get('user_id') and member_data.get('role'):
+                        team_member = ProjectTeamMember(
+                            project_id=project.id,
+                            user_id=member_data['user_id'],
+                            role=member_data['role']
+                        )
+                        db.session.add(team_member)
+            except (json.JSONDecodeError, KeyError):
+                # If team members data is invalid, continue without team members
+                pass
+            
             db.session.commit()
             
             # Log project creation
@@ -1150,9 +1178,11 @@ def add_project():
         except Exception as e:
             db.session.rollback()
             flash(f'An error occurred while adding the project: {str(e)}', 'error')
-            return render_template('add_project.html')
+            users = User.query.all()
+            return render_template('add_project.html', users=users)
     
-    return render_template('add_project.html')
+    users = User.query.all()
+    return render_template('add_project.html', users=users)
 
 @app.route('/projects/<int:id>')
 @login_required
@@ -1204,7 +1234,7 @@ def edit_project(id):
             project.start_date = validated_data['start_date_obj']
             project.end_date = validated_data['end_date_obj']
             project.principal_investigator = validated_data['principal_investigator']
-            project.team_members = validated_data['team_members']
+            project.team_members = ''  # Keep empty for backward compatibility
             project.budget = validated_data['budget_val']
             project.currency = validated_data['currency']
             project.funding_source = validated_data['funding_source']
@@ -1213,6 +1243,24 @@ def edit_project(id):
             if status_changed:
                 change_project_status(project, validated_data['status'], current_user, 
                                     f"Status changed during project edit")
+            
+            # Handle team members assignment - remove existing and add new ones
+            ProjectTeamMember.query.filter_by(project_id=project.id).delete()
+            
+            team_members_data = request.form.get('team_members_data', '[]')
+            try:
+                team_members = json.loads(team_members_data) if team_members_data else []
+                for member_data in team_members:
+                    if member_data.get('user_id') and member_data.get('role'):
+                        team_member = ProjectTeamMember(
+                            project_id=project.id,
+                            user_id=member_data['user_id'],
+                            role=member_data['role']
+                        )
+                        db.session.add(team_member)
+            except (json.JSONDecodeError, KeyError):
+                # If team members data is invalid, continue without team members
+                pass
             
             db.session.commit()
             
@@ -1236,9 +1284,11 @@ def edit_project(id):
         except Exception as e:
             db.session.rollback()
             flash(f'An error occurred while updating the project: {str(e)}', 'error')
-            return render_template('edit_project.html', project=project)
+            users = User.query.all()
+            return render_template('edit_project.html', project=project, users=users)
     
-    return render_template('edit_project.html', project=project)
+    users = User.query.all()
+    return render_template('edit_project.html', project=project, users=users)
 
 @app.route('/projects/<int:id>/delete', methods=['POST'])
 @login_required
@@ -2559,6 +2609,183 @@ def api_search_projects():
             'status': 'error',
             'message': str(e)
         }, 500
+
+# Document Management Routes
+@app.route('/project/<int:project_id>/documents')
+@login_required
+def project_documents(project_id):
+    """View all documents for a project"""
+    project = Project.query.get_or_404(project_id)
+    
+    # Check permissions
+    if not current_user.can_view_projects():
+        flash('You do not have permission to view this project.', 'error')
+        return redirect(url_for('dashboard'))
+    
+    # Get documents grouped by type
+    documents_by_type = {}
+    for doc in project.documents:
+        doc_type = doc.document_type
+        if doc_type not in documents_by_type:
+            documents_by_type[doc_type] = []
+        documents_by_type[doc_type].append(doc)
+    
+    return render_template('project_documents.html', 
+                         project=project, 
+                         documents_by_type=documents_by_type)
+
+@app.route('/project/<int:project_id>/documents/upload', methods=['GET', 'POST'])
+@login_required
+def upload_document(project_id):
+    """Upload a document for a project"""
+    project = Project.query.get_or_404(project_id)
+    
+    # Check permissions
+    if not current_user.can_edit_projects():
+        flash('You do not have permission to upload documents.', 'error')
+        return redirect(url_for('view_project', id=project_id))
+    
+    if request.method == 'POST':
+        # Check if file was uploaded
+        if 'document' not in request.files:
+            flash('No file selected.', 'error')
+            return redirect(request.url)
+        
+        file = request.files['document']
+        if file.filename == '':
+            flash('No file selected.', 'error')
+            return redirect(request.url)
+        
+        # Validate file
+        allowed_extensions = {'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'jpg', 'jpeg', 'png', 'gif'}
+        if not file or '.' not in file.filename or file.filename.rsplit('.', 1)[1].lower() not in allowed_extensions:
+            flash('Invalid file type. Allowed types: PDF, Word, Excel, PowerPoint, Text, Images.', 'error')
+            return redirect(request.url)
+        
+        # Get form data
+        document_type = request.form.get('document_type')
+        description = request.form.get('description', '').strip()
+        
+        if not document_type or document_type not in ['contract', 'report', 'deliverable']:
+            flash('Please select a valid document type.', 'error')
+            return redirect(request.url)
+        
+        try:
+            # Create uploads directory if it doesn't exist
+            uploads_dir = os.path.join(app.root_path, 'uploads', 'documents')
+            os.makedirs(uploads_dir, exist_ok=True)
+            
+            # Generate unique filename
+            import uuid
+            file_extension = file.filename.rsplit('.', 1)[1].lower()
+            unique_filename = f"{uuid.uuid4()}.{file_extension}"
+            file_path = os.path.join(uploads_dir, unique_filename)
+            
+            # Save file
+            file.save(file_path)
+            
+            # Create database record
+            document = Document(
+                project_id=project_id,
+                filename=unique_filename,
+                original_filename=file.filename,
+                file_path=file_path,
+                file_type=file_extension,
+                file_size=os.path.getsize(file_path),
+                uploaded_by=current_user.id,
+                document_type=document_type,
+                description=description
+            )
+            
+            db.session.add(document)
+            db.session.commit()
+            
+            # Log activity
+            log_user_activity('upload_document', 'document', str(document.id), {
+                'project_id': project_id,
+                'filename': file.filename,
+                'document_type': document_type
+            })
+            
+            flash(f'Document "{file.filename}" uploaded successfully.', 'success')
+            return redirect(url_for('project_documents', project_id=project_id))
+            
+        except Exception as e:
+            db.session.rollback()
+            log_error(e, {'function': 'upload_document', 'project_id': project_id}, current_user)
+            flash('Failed to upload document. Please try again.', 'error')
+            return redirect(request.url)
+    
+    return render_template('upload_document.html', project=project)
+
+@app.route('/document/<int:document_id>/download')
+@login_required
+def download_document(document_id):
+    """Download a document"""
+    document = Document.query.get_or_404(document_id)
+    
+    # Check permissions
+    if not current_user.can_view_projects():
+        flash('You do not have permission to download documents.', 'error')
+        return redirect(url_for('dashboard'))
+    
+    try:
+        # Log download activity
+        log_user_activity('download_document', 'document', str(document_id), {
+            'filename': document.original_filename,
+            'project_id': document.project_id
+        })
+        
+        # Send file
+        return send_file(
+            document.file_path,
+            as_attachment=True,
+            download_name=document.original_filename,
+            mimetype=f'application/{document.file_type}' if document.file_type in ['pdf', 'doc', 'docx', 'xls', 'xlsx'] else 'application/octet-stream'
+        )
+        
+    except Exception as e:
+        log_error(e, {'function': 'download_document', 'document_id': document_id}, current_user)
+        flash('Failed to download document.', 'error')
+        return redirect(url_for('project_documents', project_id=document.project_id))
+
+@app.route('/document/<int:document_id>/delete', methods=['POST'])
+@login_required
+def delete_document(document_id):
+    """Delete a document"""
+    document = Document.query.get_or_404(document_id)
+    
+    # Check permissions
+    if not current_user.can_edit_projects():
+        flash('You do not have permission to delete documents.', 'error')
+        return redirect(url_for('project_documents', project_id=document.project_id))
+    
+    try:
+        project_id = document.project_id
+        filename = document.original_filename
+        
+        # Delete file from disk
+        if os.path.exists(document.file_path):
+            os.remove(document.file_path)
+        
+        # Delete database record
+        db.session.delete(document)
+        db.session.commit()
+        
+        # Log activity
+        log_user_activity('delete_document', 'document', str(document_id), {
+            'project_id': project_id,
+            'filename': filename
+        })
+        
+        flash(f'Document "{filename}" deleted successfully.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        log_error(e, {'function': 'delete_document', 'document_id': document_id}, current_user)
+        flash('Failed to delete document.', 'error')
+    
+    return redirect(url_for('project_documents', project_id=project_id))
 
 @app.route('/session/extend', methods=['POST'])
 @login_required
